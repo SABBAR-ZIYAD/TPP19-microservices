@@ -1,0 +1,13 @@
+# Fichiers générés par Maven
+**/target/
+
+# Fichiers des IDE
+.idea/
+**/.idea/
+*.iml
+.vscode/
+
+# Fichiers système et journaux
+.DS_Store
+Thumbs.db
+*.log
