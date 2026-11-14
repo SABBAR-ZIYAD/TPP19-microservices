@@ -37,21 +37,9 @@ La Gateway ne dépend pas d'adresses fixes pour joindre les services. Elle utili
 
 Le service Voiture utilise également le nom `SERVICE-CLIENT` dans son client Feign. Il peut ainsi récupérer les informations d'un client et les ajouter à la réponse d'une voiture sans connaître directement le port du service Client.
 
-## 4. Organisation du projet
+## 4. Fonctionnement des services
 
-```text
-TPP19/
-├── TP19/                  # Serveur Eureka
-├── Client/                # Microservice des clients
-├── ServiceVoiture/        # Microservice des voitures
-├── GateWay/               # API Gateway
-├── docs/images/           # Captures de vérification
-└── README.md
-```
-
-## 5. Fonctionnement des services
-
-### 5.1 Serveur Eureka
+### 4.1 Serveur Eureka
 
 Le module `TP19` est configuré avec `@EnableEurekaServer`. Il centralise les informations sur les instances disponibles et permet aux autres applications de se découvrir par leur nom.
 
@@ -63,7 +51,7 @@ eureka.client.register-with-eureka=false
 eureka.client.fetch-registry=false
 ```
 
-### 5.2 Microservice Client
+### 4.2 Microservice Client
 
 Le service Client expose une API REST permettant de consulter les clients enregistrés dans une base H2. Trois clients sont insérés automatiquement au démarrage avec un `CommandLineRunner`.
 
@@ -72,7 +60,7 @@ Ses deux formes d'URL pour la consultation individuelle sont conservées :
 - `/client/{id}` pour l'accès demandé dans le TP ;
 - `/clients/{id}` pour l'appel effectué par OpenFeign.
 
-### 5.3 Microservice Voiture
+### 4.3 Microservice Voiture
 
 Le service Voiture possède sa propre base H2 et stocke uniquement l'identifiant du client dans le champ `clientId`. L'objet `Client` est marqué `@Transient` car il est récupéré à distance et ne doit pas être enregistré dans la table `voiture`.
 
@@ -88,7 +76,7 @@ public interface ClientService {
 
 L'initialisation reste tolérante si `SERVICE-CLIENT` n'est pas encore disponible : les voitures sont créées avec leur `clientId`, puis les informations des clients sont récupérées par Feign dès que le service est présent dans Eureka.
 
-### 5.4 Gateway
+### 4.4 Gateway
 
 La Gateway utilise des routes Java avec équilibrage de charge et découverte Eureka :
 
@@ -103,7 +91,7 @@ La Gateway utilise des routes Java avec équilibrage de charge et découverte Eu
 
 L'ancienne configuration statique est conservée dans `app.yml` à titre d'exemple. Comme ce fichier ne s'appelle plus `application.yml`, il n'est pas chargé automatiquement.
 
-## 6. Endpoints disponibles
+## 5. Endpoints disponibles
 
 ### Accès direct aux microservices
 
@@ -128,7 +116,7 @@ L'ancienne configuration statique est conservée dans `app.yml` à titre d'exemp
 | `GET` | `http://localhost:8888/voitures/1` | `SERVICE-VOITURE` |
 | `GET` | `http://localhost:8888/voitures/client/1` | `SERVICE-VOITURE` |
 
-## 7. Lancement du projet
+## 6. Lancement du projet
 
 Chaque commande doit être exécutée dans un terminal différent, à partir de la racine `TPP19`.
 
@@ -162,69 +150,44 @@ mvn spring-boot:run
 
 L'ordre conseillé est donc : **Eureka → Client → ServiceVoiture → Gateway**.
 
-## 8. Vérifications et résultats
+## 7. Vérifications et résultats
 
-### 8.1 Enregistrement dans Eureka
+### 7.1 Enregistrement dans Eureka
 
 La console Eureka montre que les trois applications `GATEWAY`, `SERVICE-CLIENT` et `SERVICE-VOITURE` sont enregistrées avec le statut `UP`.
 
 ![Services enregistrés dans Eureka](docs/images/eureka.png)
 
-### 8.2 Liste des clients à travers la Gateway
+### 7.2 Liste des clients à travers la Gateway
 
 L'URL `http://localhost:8888/clients` est routée par la Gateway vers `SERVICE-CLIENT`. Les trois clients initialisés sont retournés au format JSON.
 
 ![Liste des clients via la Gateway](docs/images/gateway-clients.png)
 
-### 8.3 Point d'entrée Spring Data REST
+### 7.3 Point d'entrée Spring Data REST
 
 Le service Client expose également son point d'entrée Spring Data REST sur `http://localhost:8088`.
 
 ![Point d'entrée du service Client](docs/images/client-api-root.png)
 
-### 8.4 Consultation d'un client
+### 7.4 Consultation d'un client
 
 L'appel `http://localhost:8088/clients/1` retourne le client demandé. Cette route est aussi celle utilisée par le client OpenFeign du service Voiture.
 
 ![Consultation du premier client](docs/images/client-detail.png)
 
-### 8.5 Liste des voitures à travers la Gateway
+### 7.5 Liste des voitures à travers la Gateway
 
 L'URL `http://localhost:8888/voitures` est routée vers `SERVICE-VOITURE`. Chaque voiture contient son `clientId` ainsi que les informations du client récupérées auprès de `SERVICE-CLIENT` avec OpenFeign.
 
 ![Liste des voitures via la Gateway](docs/images/gateway-voitures.png)
 
-### 8.6 Consultation d'une voiture à travers la Gateway
+### 7.6 Consultation d'une voiture à travers la Gateway
 
 L'appel `http://localhost:8888/voitures/1` retourne la voiture demandée ainsi que les informations de son propriétaire obtenues depuis `SERVICE-CLIENT`.
 
 ![Consultation d'une voiture via la Gateway](docs/images/gateway-voiture-detail.png)
 
-## 9. Tests
-
-Chaque module possède un test de chargement du contexte Spring. Le test de la Gateway vérifie aussi que les routes suivantes sont bien déclarées :
-
-- `service-client=lb://SERVICE-CLIENT`
-- `service-voiture=lb://SERVICE-VOITURE`
-
-Les tests peuvent être lancés séparément avec :
-
-```powershell
-cd TP19
-mvn test
-
-cd ../Client
-mvn test
-
-cd ../ServiceVoiture
-mvn test
-
-cd ../GateWay
-mvn test
-```
-
-Les builds Maven des quatre modules passent correctement.
-
-## 10. Conclusion
+## 8. Conclusion
 
 Ce TP met en œuvre une architecture microservices complète : chaque domaine possède son service et sa base de données, Eureka assure la découverte, la Gateway centralise les accès et OpenFeign gère la communication entre services. Le routage par nom de service évite de coder les adresses des instances dans la Gateway et permet de faire évoluer l'architecture plus facilement.
