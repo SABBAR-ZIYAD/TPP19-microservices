@@ -1,0 +1,16 @@
+# Ancienne configuration statique conservée comme exemple.
+# Le fichier s'appelle app.yml pour qu'il ne soit pas chargé automatiquement.
+spring:
+  cloud:
+    gateway:
+      server:
+        webmvc:
+          routes:
+            - id: r1
+              uri: "http://localhost:8088"
+              predicates:
+                - Path=/clients/**
+            - id: r2
+              uri: "http://localhost:8088"
+              predicates:
+                - Path=/client/**
